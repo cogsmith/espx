@@ -1,0 +1,30 @@
+logger:
+  level: DEBUG
+
+esphome:
+  name: clock
+  platform: ESP32
+  board: esp32dev
+  includes: 
+    - RGBSEG.h
+  libraries:
+    - SPI
+
+spi:
+  clk_pin: 22
+  mosi_pin: 21
+
+time:
+ - platform: homeassistant
+   id: DTHA
+   on_time_sync:
+     then:
+       - lambda: |-
+           ESP_LOGD("CLOCK","SYNC");
+
+custom_component:
+- lambda: |-
+    auto rgbseg = new RGBSEG();
+    return { rgbseg };
+
+<<: !include CONFIG_WIFI.yaml
