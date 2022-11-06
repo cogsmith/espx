@@ -1,8 +1,10 @@
+<<: !include CONFIG_WIFI.yaml
+
 logger:
   level: DEBUG
 
 esphome:
-  name: clock
+  name: clock3
   platform: ESP32
   board: esp32dev
   includes: 
@@ -27,4 +29,63 @@ custom_component:
     auto rgbseg = new RGBSEG();
     return { rgbseg };
 
-<<: !include CONFIG_WIFI.yaml
+text_sensor:
+  - platform: homeassistant
+    id: clock_colors
+    entity_id: input_text.clock_colors
+
+globals:
+  - id: CLOCK_LUX
+    type: int
+    restore_value: true
+    initial_value: '9'
+
+sensor:
+  - platform: homeassistant
+    id: clock_lux
+    entity_id: input_number.clock_lux
+    on_value:
+      then:
+        - globals.set:
+            id: CLOCK_LUX
+            value: !lambda 'ESP_LOGD("CLOCK_LUX","%f",x); return int(x);'
+  - platform: bh1750
+    name: "BH1750 Illuminance"
+    address: 0x23
+    update_interval: 1s
+    filters:
+      - throttle: 1s
+    on_value_range:
+      - below: 10
+        then:
+          - globals.set:
+              id: CLOCK_LUX
+              value: !lambda 'int z=1; ESP_LOGD("CLOCK_LUX","%d",z); return int(z);'
+      - above: 10
+        below: 25
+        then:
+          - globals.set:
+              id: CLOCK_LUX
+              value: !lambda 'int z=3; ESP_LOGD("CLOCK_LUX","%d",z); return int(z);'
+      - above: 25
+        below: 50
+        then:
+          - globals.set:
+              id: CLOCK_LUX
+              value: !lambda 'int z=5; ESP_LOGD("CLOCK_LUX","%d",z); return int(z);'
+      - above: 50
+        below: 100
+        then:
+          - globals.set:
+              id: CLOCK_LUX
+              value: !lambda 'int z=7; ESP_LOGD("CLOCK_LUX","%d",z); return int(z);'
+      - above: 100
+        then:
+          - globals.set:
+              id: CLOCK_LUX
+              value: !lambda 'int z=9; ESP_LOGD("CLOCK_LUX","%d",z); return int(z);'
+
+i2c:
+  sda: 25
+  scl: 26
+  scan: true
